@@ -144,6 +144,8 @@ class Pipeline(unittest.TestCase):
             self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), before)
             self.assertEqual(enhance.video_stream_md5(source), enhance.video_stream_md5(dest))
             self.assertEqual(enhance.main(["replace", str(work)]), 2)
+            self.assertEqual(enhance.main(["replace", str(work), "--out-dir", str(root / "edit")]), 0)
+            self.assertEqual(enhance.video_stream_md5(source), enhance.video_stream_md5(root / "edit" / "take-enhanced.mp4"))
 
     def test_split_on_silence_then_join_audio(self):
         with tempfile.TemporaryDirectory() as tmp:

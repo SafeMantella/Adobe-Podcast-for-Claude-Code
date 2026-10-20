@@ -6,7 +6,7 @@ When the user asks to remove noise, clean audio, enhance speech, run Adobe Podca
 
 ## Rules
 
-- Never type, request, or store an Adobe password.
+- Never type, request, or store an Adobe password. `login` opens a window where the user logs in.
 - Never overwrite the source file.
 - Never re-encode the video. `replace` copies the picture and swaps the audio.
 - The audio is uploaded to Adobe through the user's logged-in browser. Say that before the first upload in a session.
@@ -21,12 +21,14 @@ python3 enhance.py doctor
 python3 enhance.py install
 python3 enhance.py prepare "path/to/file.mp4"
 python3 enhance.py collect "path/to/work" --files "download.mp3"
-python3 enhance.py replace "path/to/work"
+python3 enhance.py replace "path/to/work" [--out-dir DIR]
+python3 enhance.py login                    # optional, needs patchright
+python3 enhance.py upload "path/to/work"    # optional: upload, download, collect
 python3 -m unittest discover -s tests -v
 ```
 
 ## Layout
 
-- `enhance.py` does the file work. It does not open a browser.
+- `enhance.py` does the file work. Only `login` and `upload` open a browser, and only when patchright is installed.
 - `skills/adobe-podcast-enhance/SKILL.md` is the procedure.
 - Project skill links: `.claude/skills/`, `.agents/skills/`, `.gemini/skills/`. They point at the same skill. Cursor also reads `.claude/skills/`, so this repo does not add a third copy under `.cursor/` or `.codex/`.

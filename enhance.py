@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Prepare audio for Adobe Podcast Enhance, then put the cleaned audio back.
 
-Upload and download happen in the browser. This program never logs in.
+Upload and download happen in the browser: by hand, by the agent, or with `upload`.
+This program never asks for or stores a password.
 
   python3 enhance.py doctor
   python3 enhance.py install
   python3 enhance.py prepare FILE [--plan free|premium] [--max-mb 9] [--bitrate 192k]
   python3 enhance.py status WORK
   python3 enhance.py collect WORK [--files DOWNLOAD ...]
-  python3 enhance.py replace WORK
+  python3 enhance.py replace WORK [--out-dir DIR]
+  python3 enhance.py login                      (optional, needs patchright)
+  python3 enhance.py upload WORK [--show]       (optional: upload, download, and collect)
 """
 
 from __future__ import annotations
@@ -29,6 +32,11 @@ ROOT = Path(__file__).resolve().parent
 SKILL_DIR = ROOT / "skills" / "adobe-podcast-enhance"
 ENHANCE_URL = "https://podcast.adobe.com/en/enhance"
 FEATURES_URL = "https://podcast.adobe.com/en/features"
+PROFILE_DIR = Path(os.environ.get("ADOBE_PROFILE", str(ROOT / ".browser-profile"))).expanduser()
+# Seen on podcast.adobe.com/en/enhance on 2026-10-12. Adjust here if the page changes.
+SEL_FILE = "input[type=file]"
+SEL_DONE = "text=Get transcript"
+SEL_DOWNLOAD = "button:has-text('Download')"
 
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".aif", ".aiff"}
@@ -745,7 +753,7 @@ def output_path(source: Path, kind: str, clean: Path) -> Path:
     return source.with_name(source.stem + "-enhanced" + suffix)
 
 
-def replace(work: Path, aac_bitrate: str, force: bool) -> int:
+def replace(work: Path, aac_bitrate: str, force: bool, out_dir: Path | None = None) -> int:
     aac_bitrate = parse_bitrate(aac_bitrate)
     manifest = load_manifest(work)
     if not manifest.get("clean_audio"):
@@ -757,6 +765,10 @@ def replace(work: Path, aac_bitrate: str, force: bool) -> int:
     if not clean.is_file():
         raise EnhanceError(f"cleaned audio is gone: {clean}")
     dest = output_path(source, manifest["kind"], clean)
+    if out_dir:
+        out_dir = out_dir.expanduser().resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / dest.name
     if dest.resolve() == source.resolve():
         raise EnhanceError("refusing to overwrite the source")
     if dest.exists() and not force:
@@ -901,6 +913,70 @@ def doctor() -> int:
     return 2 if missing else 0
 
 
+def open_browser(show: bool):
+    try:
+        from patchright.sync_api import sync_playwright
+    except ImportError:
+        raise EnhanceError(
+            "login and upload need patchright: pip install patchright && patchright install chromium. "
+            "Without it, upload by hand and run collect"
+        )
+    pw = sync_playwright().start()
+    # Adobe blocks headless Chromium. Without --show the window opens off screen.
+    ctx = pw.chromium.launch_persistent_context(
+        str(PROFILE_DIR), headless=False, viewport={"width": 1280, "height": 900},
+        args=[] if show else ["--window-position=-3000,-3000"],
+    )
+    return pw, ctx
+
+
+def login() -> int:
+    pw, ctx = open_browser(True)
+    try:
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        page.goto(ENHANCE_URL)
+        say("log in to Adobe in the window. It closes by itself when the Enhance page loads (up to 10 min)")
+        # The file input only exists for a logged-in session.
+        page.wait_for_selector(SEL_FILE, state="attached", timeout=10 * 60 * 1000)
+        say(f"login ok, session saved in {PROFILE_DIR}")
+    finally:
+        ctx.close()
+        pw.stop()
+    return 0
+
+
+def upload(work: Path, show: bool, timeout_min: float, tol: float) -> int:
+    manifest = load_manifest(work)
+    pending = sorted(pending_parts(manifest, work), key=lambda p: p["index"])
+    if not pending:
+        return collect(work, work, None, tol, False)
+    downloads = work / "download"
+    downloads.mkdir(parents=True, exist_ok=True)
+    saved = []
+    pw, ctx = open_browser(show)
+    try:
+        page = ctx.pages[0] if ctx.pages else ctx.new_page()
+        for part in pending:
+            page.goto(ENHANCE_URL)
+            try:
+                page.wait_for_selector(SEL_FILE, state="attached", timeout=25_000)
+            except Exception:
+                raise EnhanceError(f"no file input at {page.url[:80]}. Session expired? Run: python3 enhance.py login")
+            page.locator(SEL_FILE).first.set_input_files(str(work / part["upload"]))
+            say(f"part-{part['index']:02d}: uploaded, waiting for Enhance")
+            page.wait_for_selector(SEL_DONE, timeout=int(timeout_min * 60 * 1000))
+            with page.expect_download(timeout=120_000) as download:
+                page.locator(SEL_DOWNLOAD).first.click()
+            dest = downloads / f"part-{part['index']:02d}.mp3"
+            download.value.save_as(str(dest))
+            saved.append(dest)
+            say(f"part-{part['index']:02d}: downloaded {dest}")
+    finally:
+        ctx.close()
+        pw.stop()
+    return collect(work, downloads, saved, tol, False)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -935,6 +1011,14 @@ def build_parser() -> argparse.ArgumentParser:
     replace_cmd.add_argument("work", type=Path)
     replace_cmd.add_argument("--aac-bitrate", default="320k")
     replace_cmd.add_argument("--force", action="store_true")
+    replace_cmd.add_argument("--out-dir", type=Path, help="write the output here instead of beside the source")
+
+    sub.add_parser("login", help="log in to Adobe once in a saved browser profile (needs patchright)")
+    upload_cmd = sub.add_parser("upload", help="upload each part, download it, and run collect (needs patchright)")
+    upload_cmd.add_argument("work", type=Path)
+    upload_cmd.add_argument("--show", action="store_true", help="keep the browser window on screen")
+    upload_cmd.add_argument("--timeout-min", type=float, default=15, help="max wait per part for Enhance")
+    upload_cmd.add_argument("--tolerance", type=float, default=0.5)
     return parser
 
 
@@ -978,7 +1062,13 @@ def dispatch(argv: list[str]) -> int:
     if args.cmd == "replace":
         need_bin("ffmpeg")
         need_bin("ffprobe")
-        return replace(resolve_work(args.work), args.aac_bitrate, args.force)
+        return replace(resolve_work(args.work), args.aac_bitrate, args.force, args.out_dir)
+    if args.cmd == "login":
+        return login()
+    if args.cmd == "upload":
+        need_bin("ffmpeg")
+        need_bin("ffprobe")
+        return upload(resolve_work(args.work), args.show, args.timeout_min, args.tolerance)
     raise EnhanceError(f"unknown command {args.cmd}")
 
 

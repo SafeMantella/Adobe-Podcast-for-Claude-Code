@@ -62,6 +62,19 @@ When I ask you to clean a video or an audio file, read skills/adobe-podcast-enha
 
 O agente prepara o mp3, sobe no Enhance (ou entrega a lista, se não controlar o browser) e grava `<nome>-enhanced` ao lado do original.
 
+## Modo automático (opcional)
+
+Com `pip install patchright && patchright install chromium`, o próprio script sobe e baixa, sem o agente controlar o browser:
+
+```bash
+python3 enhance.py login                    # uma vez: você loga no Adobe na janela que abre
+python3 enhance.py prepare video.mp4 --max-mb 0
+python3 enhance.py upload enhanced/video    # sobe cada parte, espera, baixa e junta
+python3 enhance.py replace enhanced/video
+```
+
+A sessão fica em `.browser-profile/` (fora do git). A senha nunca passa pelo script.
+
 ## Limites
 
 Publicados em <https://podcast.adobe.com/en/features> em 2026-10-08. Se essa data estiver velha, vale o que estiver na página.

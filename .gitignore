@@ -4,3 +4,4 @@ __pycache__/
 *.log
 enhanced/
 .pytest_cache/
+.browser-profile/

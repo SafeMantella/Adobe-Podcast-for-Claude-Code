@@ -39,7 +39,16 @@ Open <https://podcast.adobe.com/en/enhance>.
 
 Upload one part at a time, in index order. Wait until that part's Download control is available, download it, and only then send the next part. The free plan has no bulk queue. One at a time also keeps each download tied to one part.
 
-If you can operate the logged-in browser:
+If `patchright` is installed (`pip install patchright && patchright install chromium`), the script can do this step and step 3 by itself:
+
+```bash
+python3 enhance.py login              # once. The user logs in to Adobe in the window. The session is saved in .browser-profile/ (or ADOBE_PROFILE)
+python3 enhance.py upload "WORK"      # uploads each part in order, waits, downloads, then runs collect
+```
+
+`upload` has no 10 MB cap, so `prepare --max-mb 0` fits it. The window opens off screen. Add `--show` to watch it. If it says the file input did not appear, the session expired: run `login` again. If it times out on a long part, raise `--timeout-min` (default 15). If the Adobe page changed, adjust `SEL_FILE`, `SEL_DONE`, and `SEL_DOWNLOAD` at the top of `enhance.py`. When `upload` prints `clean: ...`, go to step 4.
+
+If you can operate the logged-in browser yourself:
 
 1. Find the file input (`input[type=file]`). The visible Choose button is not the input.
 2. Set that input to the part file.
@@ -77,6 +86,7 @@ When every part is matched, collect prints `clean: ...`. If it exits without tha
 python3 enhance.py replace "WORK"
 ```
 
+- `--out-dir DIR` writes the output into `DIR` instead of next to the source.
 - Video: the output is next to the source, named `<stem>-enhanced.<ext>`. The video stream is copied. The audio is AAC at 320 kbps. `replace` prints `video-stream: copied`. If it does not, the output was not kept and the source was not modified. Report the error.
 - Audio: the output is `<stem>-enhanced.flac` when parts were joined, or the enhanced mp3 when there was one part.
 - The source file is never overwritten. If the enhanced name already exists, `replace` stops. Pass `--force` only to overwrite that previous enhanced file, after the user agrees.
@@ -100,5 +110,7 @@ python3 enhance.py doctor
 python3 enhance.py status "WORK"
 python3 enhance.py prepare "PATH" --plan premium --max-mb 0
 python3 enhance.py collect "WORK" --files "a.mp3" "b.mp3"
-python3 enhance.py replace "WORK"
+python3 enhance.py replace "WORK" --out-dir "DIR"
+python3 enhance.py login
+python3 enhance.py upload "WORK"
 ```
