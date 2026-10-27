@@ -2,7 +2,7 @@
 
 O agente extrai o áudio, envia para o [Adobe Podcast Enhance Speech](https://podcast.adobe.com/en/enhance) no browser em que a conta Adobe já está logada, e devolve o arquivo com o áudio limpo. No vídeo, a imagem original é copiada sem reencode. O arquivo original fica no lugar.
 
-Funciona com qualquer agente de código (Claude Code, Codex, Cursor, Grok, Gemini, Antigravity, OpenCode e outros). O nome do repositório é `Adobre-Podcast-for-Claude-Code`.
+Funciona com qualquer agente de código (Claude Code, Codex, Cursor, Grok, Gemini, Antigravity, OpenCode e outros). O nome do repositório é `Adobe-Podcast-for-Claude-Code`.
 
 O áudio sobe para os servidores da Adobe pelo browser da pessoa. Este repositório não tem chave de API, não guarda senha e não envia arquivo por conta própria.
 
@@ -15,10 +15,10 @@ Cole o bloco abaixo no agente. Ele clona, instala o ffmpeg se faltar, roda os te
 ```text
 Instale o pipeline de tirar ruído com Adobe Podcast. Faça você mesmo. Não me peça para rodar o que você consegue rodar.
 
-Repositório: https://github.com/SafeMantella/Adobre-Podcast-for-Claude-Code
-SSH, se a chave existir: git@github.com:SafeMantella/Adobre-Podcast-for-Claude-Code.git
+Repositório: https://github.com/SafeMantella/Adobe-Podcast-for-Claude-Code
+SSH, se a chave existir: git@github.com:SafeMantella/Adobe-Podcast-for-Claude-Code.git
 
-1. Se esta pasta ainda não for o clone, clone em ~/Adobre-Podcast-for-Claude-Code. Tente SSH. Se a chave falhar, use HTTPS.
+1. Se esta pasta ainda não for o clone, clone em ~/Adobe-Podcast-for-Claude-Code. Tente SSH. Se a chave falhar, use HTTPS.
 2. Confira que python3, ffmpeg e ffprobe executam. Se o ffmpeg faltar, instale só ele (macOS: brew install ffmpeg. Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y ffmpeg. Windows: winget install Gyan.FFmpeg). Não instale mais nada. Não há dependência de pip.
 3. Na raiz do clone, rode: python3 -m unittest discover -s tests -v
    Se um teste falhar por ambiente, corrija o ambiente e rode de novo. Se a falha for do código, pare e me mostre o erro.
@@ -39,10 +39,10 @@ Paste the block below into the agent. Same steps.
 ```text
 Install the Adobe Podcast noise-removal pipeline. Do the work yourself. Do not ask me to run a command you can run.
 
-Repository: https://github.com/SafeMantella/Adobre-Podcast-for-Claude-Code
-SSH, if a key exists: git@github.com:SafeMantella/Adobre-Podcast-for-Claude-Code.git
+Repository: https://github.com/SafeMantella/Adobe-Podcast-for-Claude-Code
+SSH, if a key exists: git@github.com:SafeMantella/Adobe-Podcast-for-Claude-Code.git
 
-1. If this folder is not already the clone, clone it to ~/Adobre-Podcast-for-Claude-Code. Try SSH. If the key fails, use HTTPS.
+1. If this folder is not already the clone, clone it to ~/Adobe-Podcast-for-Claude-Code. Try SSH. If the key fails, use HTTPS.
 2. Check that python3, ffmpeg, and ffprobe run. If ffmpeg is missing, install only ffmpeg (macOS: brew install ffmpeg. Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y ffmpeg. Windows: winget install Gyan.FFmpeg). Do not install anything else. There is no pip dependency.
 3. From the clone root, run: python3 -m unittest discover -s tests -v
    If a test fails because of the environment, fix the environment and rerun. If the failure is in the code, stop and show me the error.
